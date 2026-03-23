@@ -224,7 +224,7 @@ body{background-color:var(--bg);background-image:radial-gradient(ellipse at 20% 
   <div style="font-size:3rem">🎸</div>
   <h2>Guitar Practice Log</h2>
   <p>Sign in with Google to load and save your practice sessions directly to Google Drive.</p>
-  <div id="gsiBtn"></div>
+  <button class="btn-big" id="gsiBtn" onclick="triggerSignIn()">Sign in with Google</button>
   <button class="btn-link" onclick="showSetup()">Change Client ID / First-time setup →</button>
 </div>
 
@@ -652,14 +652,18 @@ function initAuth() {
   const ready = setInterval(() => {
     if (typeof google === 'undefined' || !google.accounts) return;
     clearInterval(ready);
-    tokenClient = google.accounts.oauth2.initTokenClient({ client_id:cid, scope:SCOPE, callback:onToken });
-    google.accounts.id.initialize({ client_id:cid, callback:onCredential, auto_select:false });
-    google.accounts.id.renderButton(document.getElementById('gsiBtn'), { theme:'outline', size:'large', text:'signin_with', shape:'pill' });
-    try { google.accounts.id.prompt(); } catch(e) { console.warn('GIS prompt suppressed:', e); }
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: cid,
+      scope: SCOPE,
+      callback: onToken
+    });
   }, 150);
 }
 
-function onCredential() { tokenClient.requestAccessToken({ prompt:'' }); }
+function triggerSignIn() {
+  if (!tokenClient) { toast('Google auth not ready yet — try again in a moment'); return; }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
 
 function onToken(resp) {
   if (resp.error) { setStatus('r','Auth error: '+resp.error); return; }
@@ -672,7 +676,9 @@ function onToken(resp) {
 }
 
 function signOut() {
-  if (typeof google!=='undefined'&&google.accounts) { google.accounts.id.disableAutoSelect(); if(token) google.accounts.oauth2.revoke(token,()=>{}); }
+  if (typeof google!=='undefined' && google.accounts && token) {
+    google.accounts.oauth2.revoke(token, ()=>{});
+  }
   token=null; fileId=null; appData={sessions:[],equip:[]};
   document.getElementById('app').style.display='none';
   document.getElementById('authOverlay').style.display='flex';
